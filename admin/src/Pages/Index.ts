@@ -1,0 +1,11 @@
+export { default as Account } from './Account/Account';
+export { default as LoginPage } from './Auth/LoginPage';
+export { default as RegisterPage } from './Auth/RegisterPage';
+export { default as Banners } from './Banners/Banners';
+export { default as Brands } from './Brands/Brands';
+export { default as DashboardPage } from './Dashboard/DashboardPage';
+export { default as HomePage } from './Home/HomePage';
+export { default as Invoices } from './Invoices/Invoices';
+export { default as Orders } from './Orders/Orders';
+export { default as Products } from './Products/Products';
+export { default as UsersPage } from './Users/UsersPage';
