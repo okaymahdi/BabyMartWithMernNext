@@ -1,6 +1,25 @@
 // src/Pages/UsersPage.tsx
+
+import { UserSkeleton } from '@/Components/Index';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/Components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/Components/ui/form';
+import ImageUpload from '@/Components/ui/Image.upload';
 import { Input } from '@/Components/ui/input';
 import {
   Select,
@@ -18,13 +37,51 @@ import {
   TableHeader,
   TableRow,
 } from '@/Components/ui/table';
+
 import useAxiosPrivate from '@/Hooks/useAxiosPrivate';
 import type { User } from '@/lib/Types/UserTypes';
 import { cn } from '@/lib/utils';
 import useAuthStore from '@/Store/UseAuthStore';
-import { Edit, Eye, RefreshCcw, Search, Trash, Users } from 'lucide-react';
+import { apiLogger } from '@/utils/apiLogger';
+import { zodResolver } from '@hookform/resolvers/zod';
+import axios from 'axios';
+import {
+  Edit,
+  Eye,
+  Plus,
+  RefreshCcw,
+  Search,
+  Trash,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useForm, type Path } from 'react-hook-form';
 import { toast } from 'sonner';
+import z from 'zod';
+
+// Zod Schema (Admin Create User)
+const CreateUserSchema = z.object({
+  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
+  email: z.string().email('Invalid email address'),
+  password: z
+    .string()
+    .min(6, { message: 'Password must be at least 6 characters' }),
+  role: z.enum(['user', 'admin', 'manager'], {
+    message: 'Select a valid role',
+  }),
+  gender: z.enum(['male', 'female', 'other']).optional(),
+});
+
+type FormData = z.infer<typeof CreateUserSchema>;
+
+// Form fields config
+const formFields: { name: Path<FormData>; label: string; type: string }[] = [
+  { name: 'name', label: 'Name', type: 'text' },
+  { name: 'email', label: 'Email', type: 'email' },
+  { name: 'password', label: 'Password', type: 'password' },
+  { name: 'role', label: 'Role', type: 'select' },
+];
 
 const UsersPage = () => {
   // 🔹 Users data state
@@ -43,7 +100,7 @@ const UsersPage = () => {
 
   // 🔹 Loading & refresh
   const [loading, setLoading] = useState(false);
-  const [refresh, setRefresh] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   // 🔹 Filters
@@ -55,27 +112,36 @@ const UsersPage = () => {
   const { checkIsAdmin } = useAuthStore();
   const isAdmin = checkIsAdmin();
 
+  // 🔹 Form hooks (must be at top level)
+  const addForm = useForm<FormData & { avatar?: string }>({
+    resolver: zodResolver(CreateUserSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      role: 'user',
+      avatar: '', // 💡 add default value
+    },
+  });
+
   // 🔹 Fetch users
   const fetchUsers = async () => {
-    setLoading(true);
+    setLoading(true); // 🦴 only first load
+
     try {
+      await new Promise((res) => setTimeout(res, 1000)); // 🧪 test
+
       // 🔹 API call
       // const res = await axiosPrivate.get(
       //   `/users?page=${page}&perPage=${perPage}&role=${roleFilter}&search=${searchTerm}`,
       // );
 
-      // 🔹 API call Second Style
       const res = await axiosPrivate.get('/users');
-      console.log('User Data:', res);
-
-      if (res?.data) {
-        setUsers(res?.data?.users || []); // ✅ array of users
-        setTotal(res?.data?.count || 0); // ✅ total count
-        // setTotal(res?.data?.users?.length || 0); // ✅ total count
-      }
+      setUsers(res.data.users || []);
+      setTotal(res.data.count || 0);
     } catch (error) {
-      console.error('Failed to fetch users:', error);
-      toast.error('Failed to fetch users');
+      console.log('Failed to Load Users!', error);
+      toast.error('Failed to Load Users!');
     } finally {
       setLoading(false);
     }
@@ -83,20 +149,32 @@ const UsersPage = () => {
 
   // 🔹 Refresh Control
   const handleRefresh = async () => {
-    setRefreshing(true);
+    setRefreshing(true); // 🔄 spinner
     try {
-      await fetchUsers();
+      await new Promise((res) => setTimeout(res, 1000)); // 🧪 test
+
+      // 🔹 API call
+      // const res = await axiosPrivate.get(
+      //   `/users?page=${page}&perPage=${perPage}&role=${roleFilter}&search=${searchTerm}`,
+      // );
+
+      const res = await axiosPrivate.get('/users');
+      setUsers(res.data.users || []);
+      setTotal(res.data.count || 0);
+    } catch (error) {
+      console.log('Failed to Load Users!', error);
+      toast.error('Failed to Load Users!');
     } finally {
-      setRefreshing(false);
+      setRefreshing(false); // 🔄 spinner
     }
   };
 
   // 🔹 Effect (refresh যুক্ত)
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(); // 🦴 skeleton দেখাবে
   }, []);
 
-  // Filter User
+  // 🔹 Filter User
   const handleFilteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -107,7 +185,7 @@ const UsersPage = () => {
     return matchesSearch && matchesRole;
   });
 
-  // Dynamic Role Colors
+  // 🔹 Dynamic Role Colors
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
@@ -121,14 +199,73 @@ const UsersPage = () => {
     }
   };
 
-  // Handle View Users Details
+  // 🔹 Handle View Users Details
   const handleView = () => {};
 
-  // Handle Edit User Data
+  // 🔹 Handle Edit User Data
   const handleEdit = () => {};
 
-  // Handle Delete User
+  // 🔹 Handle Delete User
   const handleDelete = () => {};
+
+  // 🔹 Handle Loading State
+  if (loading) {
+    return (
+      <div>
+        <UserSkeleton isAdmin={isAdmin} />
+      </div>
+    );
+  }
+
+  // 🔹 Handle Add User
+  const handleAddUser = async (data: FormData) => {
+    if (formLoading) return; // Prevent duplicate submits
+    setFormLoading(true);
+
+    const addUserPromise = (async () => {
+      await axiosPrivate.post('/users', data);
+    })();
+
+    try {
+      await toast.promise(addUserPromise, {
+        loading: '⏳ Adding user...',
+        success: () => {
+          // Optionally: log success
+          apiLogger({
+            event: 'ADD_USER',
+            endpoint: '/users',
+            payload: data,
+            response: 'User added successfully',
+            success: true,
+          });
+
+          addForm.reset(); // Reset form fields
+          handleRefresh(); // Refresh user list
+
+          return '✅ User added successfully!';
+        },
+        error: (err) => {
+          // Log error
+          apiLogger({
+            event: 'ADD_USER',
+            endpoint: '/users',
+            payload: data,
+            error: err,
+            success: false,
+          });
+
+          if (axios.isAxiosError(err))
+            return err.response?.data?.message ?? '⚠️ Failed to add user!';
+          if (err instanceof Error) return err.message;
+          return '⚠️ Failed to add user!';
+        },
+      });
+
+      await addUserPromise; // Ensure promise resolves
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   return (
     <div className='p-5 space-y-5'>
@@ -147,10 +284,10 @@ const UsersPage = () => {
         <div className='flex items-center gap-4'>
           <Users className='w-8 h-8 text-blue-600' />
           <span className='text-2xl font-bold text-blue-600 flex items-center gap-2 w-10'>
-            {loading ? (
-              <Spinner className='animate-spin text-blue-600' />
+            {refreshing ? (
+              <Spinner className='h-5 w-5 animate-spin text-blue-600' /> // 🔄
             ) : (
-              total
+              total // 🔢
             )}
           </span>
 
@@ -171,7 +308,7 @@ const UsersPage = () => {
                 onClick={() => setIsAddModalOpen(true)}
                 className='px-5 py-2 text-sm font-medium  rounded-xl bg-linear-to-r from-indigo-500 to-purple-600 hover:opacity-90 transition shadow-md'
               >
-                + Add User
+                <Plus className='mr-2 h-4 w-4' /> Add User
               </Button>
             </>
           )}
@@ -314,6 +451,131 @@ const UsersPage = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* ➕ Add User Modal */}
+      <Dialog
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+      >
+        <DialogContent className='sm:max-w-137.5 max-h-[90vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle>Add User</DialogTitle>
+            <DialogDescription>Add a new user Account.</DialogDescription>
+          </DialogHeader>
+          <Form {...addForm}>
+            <form
+              onSubmit={addForm.handleSubmit(handleAddUser)}
+              className='space-y-4'
+            >
+              {formFields.map((field) => (
+                <FormField
+                  key={field.name}
+                  control={addForm.control}
+                  name={field.name}
+                  render={({ field: rhfField }) => (
+                    <FormItem>
+                      <FormLabel>{field.label}</FormLabel>
+                      <FormControl>
+                        {field.name === 'role' ? (
+                          <Select
+                            {...rhfField}
+                            onValueChange={(val: FormData['role']) =>
+                              rhfField.onChange(val)
+                            }
+                          >
+                            <SelectTrigger className='w-full border-gray-300 rounded-lg focus:ring focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200'>
+                              <SelectValue placeholder='Select role' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='user'>User</SelectItem>
+                              <SelectItem value='admin'>Admin</SelectItem>
+                              <SelectItem value='manager'>Manager</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            {...rhfField}
+                            type={field.type}
+                            placeholder={
+                              field.type === 'password'
+                                ? '********'
+                                : `Enter ${field.label}`
+                            }
+                            disabled={formLoading}
+                          />
+                        )}
+                      </FormControl>
+                      <FormMessage>
+                        {addForm.formState.errors[field.name]?.message}
+                      </FormMessage>
+                    </FormItem>
+                  )}
+                />
+              ))}
+
+              {/* ✅ Avatar Upload Conditional */}
+              {isAddModalOpen && (
+                <FormField
+                  control={addForm.control}
+                  name='avatar'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Avatar</FormLabel>
+                      <FormControl>
+                        <ImageUpload
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          disabled={formLoading}
+                        />
+                      </FormControl>
+                      <FormMessage>
+                        {addForm.formState.errors['avatar']?.message}
+                      </FormMessage>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <DialogFooter className='mt-6 flex justify-end gap-3'>
+                <Button
+                  type='button'
+                  variant={'outline'}
+                  onClick={() => setIsAddModalOpen(false)}
+                  disabled={formLoading}
+                  className='border-gray-300 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200'
+                >
+                  {formLoading ? (
+                    <span className='flex items-center justify-center gap-2'>
+                      <Spinner className='h-4 w-4 text-white' />
+                      Creating...
+                    </span>
+                  ) : (
+                    <span className='flex items-center justify-center gap-2'>
+                      Cancel
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  type='submit'
+                  disabled={formLoading}
+                >
+                  {formLoading ? (
+                    <span className='flex items-center justify-center gap-2'>
+                      <Spinner className='h-4 w-4 text-white' />
+                      Creating...
+                    </span>
+                  ) : (
+                    <span className='flex items-center justify-center gap-2'>
+                      <UserPlus className='h-4 w-4' />
+                      Create User
+                    </span>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

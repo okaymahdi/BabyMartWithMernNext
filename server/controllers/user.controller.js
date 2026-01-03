@@ -41,7 +41,7 @@ const getUserByIdController = asyncHandler(async (req, res) => {
 
 // Create User
 const createUserController = asyncHandler(async (req, res) => {
-  const { name, email, password, role, addresses } = req.body;
+  const { name, email, password, role, addresses, avatar } = req.body;
 
   const userExists = await User.findOne({ email });
   if (userExists) {
@@ -49,21 +49,30 @@ const createUserController = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
+  let avatarUrl = '';
+  if (avatar) {
+    // Base64 থেকে image file save করা
+    const matches = avatar.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+    if (matches) {
+      const ext = matches[1];
+      const data = Buffer.from(matches[2], 'base64');
+      const filename = `${Date.now()}.${ext}`;
+      const filePath = path.join(__dirname, '../uploads/', filename);
+      fs.writeFileSync(filePath, data);
+      avatarUrl = `/uploads/${filename}`; // DB এ URL save হবে
+    }
+  }
+
   const user = await User.create({
     name,
     email,
     password,
     role,
+    avatar: avatarUrl || avatar, // যদি file save হয় → avatarUrl, নাহলে frontend base64
     addresses: addresses || [],
   });
 
   if (user) {
-    // Initial Empty Cart Creation
-    // await Cart.create({
-    //   user: user._id,
-    //   items: [],
-    // });
-
     res.status(201).json({
       success: true,
       user,

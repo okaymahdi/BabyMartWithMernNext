@@ -39,7 +39,7 @@ const RegisterSchema = z.object({
     .string()
     .min(6, { message: 'Password must be at least 6 characters' }),
   role: z.enum(['user'], { message: 'Role is fixed for normal users' }), // 🔒 fixed role
-  gender: z.enum(['male', 'female'], { message: 'Gender is required' }), // Added gender field
+  gender: z.enum(['male', 'female', 'other']).optional(), // optional gender
 });
 
 type FormData = z.infer<typeof RegisterSchema>;
@@ -56,7 +56,7 @@ const formFields: {
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'password', label: 'Password', type: 'password' },
   { name: 'role', label: 'Role', type: 'text' }, // fixed 'user'
-  { name: 'gender', label: 'Gender', type: 'radio' }, // gender field (radio button)
+  { name: 'gender', label: 'Gender', type: 'select' }, // now a drop-down select
 ];
 
 // -----------------------------
@@ -74,18 +74,18 @@ const RegisterPage = () => {
       email: '',
       password: '',
       role: 'user', // fixed role
-      gender: 'male', // default gender as male
+      gender: 'other', // default = Prefer not to say
     },
   });
 
   // Watch gender value for conditional rendering
-  const gender = form.watch('gender'); // Use watch to get current gender value
+  const gender = form.watch('gender');
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     if (isLoading) return;
     setIsLoading(true);
 
-    const { name, gender } = data; // Get name and gender from form data
+    const { name, gender } = data;
 
     const registerPromise = (async () => {
       await registerUser(data);
@@ -103,14 +103,15 @@ const RegisterPage = () => {
       toast.promise(registerPromise, {
         loading: '⏳ Creating your account...',
         success: () => {
-          // Gender-based message
           const genderMessage =
-            gender === 'male' ? 'Welcome, Sir!' : "Welcome, Ma'am!";
+            gender === 'male'
+              ? 'Welcome, Sir!'
+              : gender === 'female'
+              ? "Welcome, Ma'am!"
+              : 'Welcome!';
 
-          // Returning the success message with user's name and gender-based message
           navigate('/login', { state: { email: data.email } });
 
-          // This is the message shown in the toast
           return (
             <>
               <p>{`Account created successfully, ${name}! 🎉`}</p>
@@ -133,7 +134,7 @@ const RegisterPage = () => {
         },
       });
 
-      await registerPromise; // 🔥 await actual promise here
+      await registerPromise;
     } finally {
       setIsLoading(false);
     }
@@ -177,28 +178,15 @@ const RegisterPage = () => {
                               className='cursor-not-allowed border-gray-300 bg-gray-100 text-gray-500'
                             />
                           ) : formField.name === 'gender' ? (
-                            <div className='flex gap-4'>
-                              <label className='inline-flex items-center'>
-                                <input
-                                  {...field}
-                                  type='radio'
-                                  value='male'
-                                  checked={field.value === 'male'}
-                                  className='form-radio text-blue-600'
-                                />
-                                <span className='ml-2'>Male</span>
-                              </label>
-                              <label className='inline-flex items-center'>
-                                <input
-                                  {...field}
-                                  type='radio'
-                                  value='female'
-                                  checked={field.value === 'female'}
-                                  className='form-radio text-pink-600'
-                                />
-                                <span className='ml-2'>Female</span>
-                              </label>
-                            </div>
+                            <select
+                              {...field}
+                              disabled={isLoading}
+                              className='w-full border rounded-md p-2'
+                            >
+                              <option value='male'>Male</option>
+                              <option value='female'>Female</option>
+                              <option value='other'>Prefer not to say</option>
+                            </select>
                           ) : (
                             <Input
                               {...field}
@@ -223,15 +211,17 @@ const RegisterPage = () => {
                 {/* Conditional Rendering based on Gender */}
                 {gender === 'male' && (
                   <div className='mt-4 text-blue-600'>
-                    {/* Male-specific content or image */}
                     <p>Welcome, Sir!</p>
                   </div>
                 )}
-
                 {gender === 'female' && (
                   <div className='mt-4 text-pink-600'>
-                    {/* Female-specific content or image */}
                     <p>Welcome, Ma'am!</p>
+                  </div>
+                )}
+                {gender === 'other' && (
+                  <div className='mt-4 text-gray-600'>
+                    <p>Welcome!</p>
                   </div>
                 )}
 
