@@ -1,5 +1,14 @@
 // src/Pages/UsersPage.tsx
+import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/Components/ui/select';
 import { Spinner } from '@/Components/ui/spinner';
 import {
   Table,
@@ -11,8 +20,9 @@ import {
 } from '@/Components/ui/table';
 import useAxiosPrivate from '@/Hooks/useAxiosPrivate';
 import type { User } from '@/lib/Types/UserTypes';
+import { cn } from '@/lib/utils';
 import useAuthStore from '@/Store/UseAuthStore';
-import { RefreshCcw, Users } from 'lucide-react';
+import { Edit, Eye, RefreshCcw, Search, Trash, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -86,6 +96,40 @@ const UsersPage = () => {
     fetchUsers();
   }, []);
 
+  // Filter User
+  const handleFilteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+
+    return matchesSearch && matchesRole;
+  });
+
+  // Dynamic Role Colors
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-red-100 text-red-800';
+      case 'user':
+        return 'bg-green-100 text-green-800';
+      case 'manager':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Handle View Users Details
+  const handleView = () => {};
+
+  // Handle Edit User Data
+  const handleEdit = () => {};
+
+  // Handle Delete User
+  const handleDelete = () => {};
+
   return (
     <div className='p-5 space-y-5'>
       {/* ===== 🔹 Header ===== */}
@@ -134,7 +178,36 @@ const UsersPage = () => {
         </div>
       </div>
 
-      {/* ===== 🔍 Filter ===== */}
+      {/* ===== 🔍 Search & Filter ===== */}
+      <div>
+        <div className='flex items-center gap-4 flex-wrap'>
+          <div className='flex items-center gap-2'>
+            <Search className='h-4 w-4 text-gray-500' />
+            <Input
+              placeholder='Search Users...'
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className='w-64'
+            />
+          </div>
+          <div>
+            <Select
+              value={roleFilter}
+              onValueChange={setRoleFilter}
+            >
+              <SelectTrigger className='w-48'>
+                <SelectValue placeholder='Filter By Role' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Role</SelectItem>
+                <SelectItem value='admin'>Admin</SelectItem>
+                <SelectItem value='manager'>Manager</SelectItem>
+                <SelectItem value='user'>User</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
 
       {/* ===== 📊 Users Table / List ===== */}
 
@@ -144,14 +217,15 @@ const UsersPage = () => {
             <TableRow className='bg-gray-50'>
               <TableHead className='font-semibold'>Avatar</TableHead>
               <TableHead className='font-semibold'>Name</TableHead>
+              <TableHead className='font-semibold'>Email</TableHead>
               <TableHead className='font-semibold'>Role</TableHead>
               <TableHead className='font-semibold'>Created At</TableHead>
               <TableHead className='font-semibold'>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users?.length > 0 ? (
-              users?.map((user) => (
+            {handleFilteredUsers?.length > 0 ? (
+              handleFilteredUsers?.map((user) => (
                 <TableRow key={user._id}>
                   <TableCell>
                     <div className='h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shadow-sm overflow-hidden'>
@@ -165,6 +239,51 @@ const UsersPage = () => {
                         <span className='text-lg'>
                           {user?.name?.charAt(0).toUpperCase()}
                         </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className='font-medium'>{user.name}</TableCell>
+                  <TableCell className='text-gray-600'>{user.email}</TableCell>
+                  <TableCell className='font-medium'>
+                    <Badge
+                      className={cn('capitalize', getRoleColor(user.role))}
+                    >
+                      {user.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <div className='flex items-center gap-2'>
+                      <Button
+                        variant={'ghost'}
+                        size={'icon'}
+                        onClick={() => handleView(user)}
+                        title='View User Details'
+                      >
+                        <Eye className='h-4 w-4' />
+                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant={'ghost'}
+                            size={'icon'}
+                            onClick={() => handleEdit(user)}
+                            title='Edit User Details'
+                          >
+                            <Edit className='h-4 w-4' />
+                          </Button>
+                          <Button
+                            variant={'ghost'}
+                            size={'icon'}
+                            onClick={() => handleDelete(user)}
+                            title='Delete User!'
+                            className='text-red-600 hover:text-red-700'
+                          >
+                            <Trash className='h-4 w-4' />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </TableCell>

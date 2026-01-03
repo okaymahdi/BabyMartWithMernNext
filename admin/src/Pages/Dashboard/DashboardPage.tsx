@@ -1,5 +1,4 @@
 import useAuthStore from '@/Store/UseAuthStore';
-import { Navigate } from 'react-router';
 
 const DashboardPage = () => {
   const { user, token } = useAuthStore();
@@ -8,14 +7,14 @@ const DashboardPage = () => {
 
   console.log('Dashboard isAuthenticated:', isAuthenticated);
 
-  if (!isAuthenticated) {
-    return (
-      <Navigate
-        to='/login'
-        replace
-      />
-    );
-  }
+  // if (!isAuthenticated) {
+  //   return (
+  //     <Navigate
+  //       to='/login'
+  //       replace
+  //     />
+  //   );
+  // }
 
   return <div>Dashboard</div>;
 };
