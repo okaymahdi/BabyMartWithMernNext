@@ -77,7 +77,11 @@ const UsersTable = ({
                   <div className='h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shadow-sm overflow-hidden'>
                     {user.avatar ? (
                       <img
-                        src={user.avatar}
+                        src={
+                          user.avatar.startsWith('http')
+                            ? user.avatar
+                            : `${import.meta.env.VITE_API_URL}${user.avatar}`
+                        }
                         alt={user.name}
                         className='w-full h-full object-cover'
                       />
@@ -88,6 +92,7 @@ const UsersTable = ({
                     )}
                   </div>
                 </TableCell>
+
                 <TableCell className='font-medium'>{user.name}</TableCell>
                 <TableCell className='text-gray-600'>{user.email}</TableCell>
                 <TableCell className='font-medium'>

@@ -3,6 +3,8 @@ import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 
 // Routes
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { specs } from '../config/swagger.js';
 import errorHandler from '../middlewares/error.Middleware.js';
 import indexRouter, {
@@ -20,7 +22,14 @@ import indexRouter, {
   wishlistRoutes,
 } from '../routes/index.routes.js';
 
+// __dirname fix for ES Module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
+
+// Public folder serve করা
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 /**
  * 🌐 CORS Middleware

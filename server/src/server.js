@@ -1,10 +1,12 @@
 import chalk from 'chalk';
 import dotenv from 'dotenv';
+
 import connectDB from '../config/db.js';
 import app from './app.js';
 
 // 📦 Load Env
 dotenv.config();
+// true হলে file আছে
 
 // 🗄 Connect MongoDB
 connectDB()

@@ -10,6 +10,7 @@ import AddUserModal from '@/Modals/AddUserModal';
 import useAuthStore from '@/Store/UseAuthStore';
 import { apiLogger } from '@/utils/apiLogger';
 import { zodResolver } from '@hookform/resolvers/zod';
+import axios from 'axios';
 import { Plus, RefreshCcw, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -34,6 +35,7 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
+  // RHF Form
   const addForm = useForm<FormData>({
     resolver: zodResolver(CreateUserSchema),
     defaultValues: {
@@ -45,74 +47,77 @@ const UsersPage = () => {
     },
   });
 
-  const handleRefresh = async () => {
-    setRefreshing(true); // 🔄 spinner
-    try {
-      await new Promise((res) => setTimeout(res, 1000)); // 🧪 test
-
-      // 🔹 API call
-      // const res = await axiosPrivate.get(
-      //   `/users?page=${page}&perPage=${perPage}&role=${roleFilter}&search=${searchTerm}`,
-      // );
-
-      const res = await axiosPrivate.get('/users');
-      setLocalUsers(res.data.users || []);
-      setLocalTotal(res.data.count || 0);
-    } catch (error) {
-      console.log('Failed to Load Users!', error);
-      toast.error('Failed to Load Users!');
-    } finally {
-      setRefreshing(false); // 🔄 spinner
-    }
-  };
-
-  const handleAddUser = async (data: FormData) => {
-    if (formLoading) return;
-    setFormLoading(true);
-
-    try {
-      await toast.promise(axiosPrivate.post('/users', data), {
-        loading: '⏳ Adding user...',
-        success: () => {
-          apiLogger({
-            event: 'ADD_USER',
-            endpoint: '/users',
-            payload: data,
-            success: true,
-          });
-          addForm.reset();
-          void fetchUsers();
-          return '✅ User added successfully!';
-        },
-        error: (err) => {
-          apiLogger({
-            event: 'ADD_USER',
-            endpoint: '/users',
-            payload: data,
-            success: false,
-            error: err,
-          });
-          return err instanceof Error ? err.message : '⚠️ Failed to add user!';
-        },
-      });
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
+  // 🔹 Sync local state with useUsers hook
   useEffect(() => {
     setLocalUsers(users);
     setLocalTotal(total);
   }, [users, total]);
 
-  // 🔹 Filtered Users
-  const handleFilteredUsers = localUsers.filter((user) => {
+  // 🔹 Refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchUsers(); // useUsers hook থেকে data reload
+    } catch (error) {
+      toast.error('Failed to Refresh Users!');
+      console.log('Failed to Refresh Users!', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // 🔹 Add User handler
+  const handleAddUser = async (data: FormData) => {
+    if (formLoading) return;
+    setFormLoading(true);
+
+    try {
+      // 1️⃣ Create user API call
+      const res = await axiosPrivate.post('/users', data);
+
+      // 2️⃣ Success toast
+      toast.success('✅ User added successfully!');
+
+      // 3️⃣ Log success
+      apiLogger({
+        event: 'ADD_USER',
+        endpoint: '/users',
+        payload: data,
+        response: res.data,
+        success: true,
+      });
+
+      // 4️⃣ Reset form & close modal
+      addForm.reset();
+      setIsAddModalOpen(false);
+
+      // 5️⃣ Refresh table AFTER API call
+      await fetchUsers();
+    } catch (err) {
+      console.error('Add User Error:', err);
+
+      apiLogger({
+        event: 'ADD_USER',
+        endpoint: '/users',
+        payload: data,
+        error: err,
+        success: false,
+      });
+
+      if (axios.isAxiosError(err))
+        toast.error(err.response?.data?.message || '⚠️ Failed to add user!');
+      else toast.error('⚠️ Failed to add user!');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // 🔹 Filtered Users based on search & role
+  const filteredUsers = localUsers.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-
     return matchesSearch && matchesRole;
   });
 
@@ -171,7 +176,7 @@ const UsersPage = () => {
 
       {/* Users Table */}
       <UsersTable
-        users={handleFilteredUsers}
+        users={filteredUsers}
         isAdmin={isAdmin}
         onView={(user) => console.log('view', user)}
         onEdit={(user) => console.log('edit', user)}
@@ -186,8 +191,6 @@ const UsersPage = () => {
         onSubmit={handleAddUser}
         loading={formLoading}
       />
-
-      {/* ➕ Add User Modal */}
     </div>
   );
 };

@@ -1,6 +1,14 @@
 import asyncHandler from 'express-async-handler';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import User from '../models/User.model.js';
 import { userLogger } from '../utils/userLogger.js';
+
+// ES Module __dirname fix
+// ES Module fix
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // GET /api/users
 const getAllUsersController = asyncHandler(async (req, res) => {
@@ -51,15 +59,13 @@ const createUserController = asyncHandler(async (req, res) => {
 
   let avatarUrl = '';
   if (avatar) {
-    // Base64 থেকে image file save করা
     const matches = avatar.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
     if (matches) {
       const ext = matches[1];
       const data = Buffer.from(matches[2], 'base64');
       const filename = `${Date.now()}.${ext}`;
-      const filePath = path.join(__dirname, '../uploads/', filename);
-      fs.writeFileSync(filePath, data);
-      avatarUrl = `/uploads/${filename}`; // DB এ URL save হবে
+      fs.writeFileSync(path.join(__dirname, '../uploads', filename), data);
+      avatarUrl = `/uploads/${filename}`;
     }
   }
 
