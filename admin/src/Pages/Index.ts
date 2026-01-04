@@ -8,4 +8,5 @@ export { default as HomePage } from './Home/HomePage';
 export { default as Invoices } from './Invoices/Invoices';
 export { default as Orders } from './Orders/Orders';
 export { default as Products } from './Products/Products';
+export { default as UserField } from './Users/UserField';
 export { default as UsersPage } from './Users/UsersPage';

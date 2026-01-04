@@ -89,6 +89,8 @@ const loginController = asyncHandler(async (req, res) => {
 
   const token = generateToken(user._id.toString()); // 🎟 generate JWT
 
+  // ✅ convert Mongoose doc to plain object
+  const userObj = user.toObject({ getters: true, versionKey: false });
   res.status(200).json({
     // 📤 safe response
     _id: user._id, // 🆔 user ID
@@ -98,7 +100,12 @@ const loginController = asyncHandler(async (req, res) => {
     role: user.role, // 👑 role
     addresses: user.addresses || [], // 🏠 addresses
     token: token, // 🎟 JWT
-    loggedInAt: new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' }), // 🕒 login time
+    createdAt: user.createdAt
+      ? new Date(user.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: user.updatedAt
+      ? new Date(user.updatedAt).toISOString()
+      : new Date().toISOString(), // 🕒 login time
   });
 
   userLogger({

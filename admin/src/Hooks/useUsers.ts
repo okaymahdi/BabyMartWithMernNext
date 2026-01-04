@@ -2,39 +2,31 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from '@/lib/Types/UserTypes';
 import useAxiosPrivate from '@/Hooks/useAxiosPrivate';
+import { toast } from 'sonner';
 
-interface Filters {
-  search: string;
-  role: string;
-}
-
-const useUsers = () => {
+export const useUsers = () => {
   const axiosPrivate = useAxiosPrivate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState<Filters>({ search: '', role: 'all' });
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axiosPrivate.get('/users', {
-        params: { ...filters },
-      });
+      const res = await axiosPrivate.get('/users');
       setUsers(res.data.users || []);
       setTotal(res.data.count || 0);
     } catch (err) {
       console.error(err);
+      toast.error('Failed to load users!');
     } finally {
       setLoading(false);
     }
-  }, [axiosPrivate, filters]);
+  }, [axiosPrivate]);
 
   useEffect(() => {
     void fetchUsers();
   }, [fetchUsers]);
 
-  return { users, loading, total, filters, setFilters, refresh: fetchUsers };
+  return { users, setUsers, total, loading, fetchUsers };
 };
-
-export { useUsers };

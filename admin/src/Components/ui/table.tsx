@@ -1,7 +1,9 @@
+import { cn } from '@/lib/utils';
 import * as React from 'react';
 
-import { cn } from '@/lib/utils';
-
+// --------------------
+// Table Container
+// --------------------
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div
@@ -17,27 +19,64 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
   );
 }
 
-function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
+// --------------------
+// Table Header
+// --------------------
+function TableHeader({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<'thead'>) {
+  const filteredChildren = React.Children.toArray(children).filter(
+    (child) => typeof child !== 'string' || child.trim() !== '',
+  );
+
   return (
     <thead
       data-slot='table-header'
       className={cn('[&_tr]:border-b', className)}
       {...props}
-    />
+    >
+      {filteredChildren}
+    </thead>
   );
 }
 
-function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
+// --------------------
+// Table Body
+// --------------------
+function TableBody({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<'tbody'>) {
+  const filteredChildren = React.Children.toArray(children).filter(
+    (child) => typeof child !== 'string' || child.trim() !== '',
+  );
+
   return (
     <tbody
       data-slot='table-body'
       className={cn('[&_tr:last-child]:border-0', className)}
       {...props}
-    />
+    >
+      {filteredChildren}
+    </tbody>
   );
 }
 
-function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
+// --------------------
+// Table Footer
+// --------------------
+function TableFooter({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<'tfoot'>) {
+  const filteredChildren = React.Children.toArray(children).filter(
+    (child) => typeof child !== 'string' || child.trim() !== '',
+  );
+
   return (
     <tfoot
       data-slot='table-footer'
@@ -46,11 +85,24 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
         className,
       )}
       {...props}
-    />
+    >
+      {filteredChildren}
+    </tfoot>
   );
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
+// --------------------
+// Table Row
+// --------------------
+function TableRow({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<'tr'>) {
+  const filteredChildren = React.Children.toArray(children).filter(
+    (child) => typeof child !== 'string' || child.trim() !== '',
+  );
+
   return (
     <tr
       data-slot='table-row'
@@ -59,10 +111,15 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
         className,
       )}
       {...props}
-    />
+    >
+      {filteredChildren}
+    </tr>
   );
 }
 
+// --------------------
+// Table Head Cell
+// --------------------
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   return (
     <th
@@ -76,6 +133,9 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   );
 }
 
+// --------------------
+// Table Body Cell
+// --------------------
 function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   return (
     <td
@@ -89,6 +149,9 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   );
 }
 
+// --------------------
+// Table Caption
+// --------------------
 function TableCaption({
   className,
   ...props

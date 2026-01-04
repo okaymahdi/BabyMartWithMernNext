@@ -13,6 +13,7 @@ import {
   Orders,
   Products,
   RegisterPage,
+  UserField,
   UsersPage,
 } from '@/Pages/Index';
 import ProtectedRoute from '@/Routes/ProtectedRoute';
@@ -88,9 +89,14 @@ const router = createBrowserRouter([
         Component: Products,
       },
       {
-        path: '/dashboard/Users',
+        path: '/dashboard/users',
         Component: UsersPage,
       },
+      {
+        path: '/dashboard/user',
+        Component: UserField,
+      },
+
       {
         path: '/dashboard/create-users',
         Component: CreateUserPage,

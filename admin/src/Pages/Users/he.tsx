@@ -3,9 +3,9 @@ import useAuthStore from '@/Store/UseAuthStore';
 import type { User } from '@/lib/Types/UserTypes';
 import { useEffect, useState } from 'react';
 
-import { Pagination } from '@/Components/Users/Pagination';
+import { Pagination } from '@/Components/AIUsers/Pagination';
 import { UsersSkeleton } from '@/Components/Users/UsersSkeleton';
-import { UsersTable } from '@/Components/Users/UsersTable';
+import { UsersTable } from '@/Components/AIUsers/UsersTable';
 import { Modal } from '@/Components/ui/Modal';
 
 const UsersPage = () => {

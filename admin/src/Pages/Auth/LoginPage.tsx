@@ -70,7 +70,6 @@ const LoginPage = () => {
     const loginPromise = (async () => {
       const user = await login(data); // login must throw on error
       await new Promise((res) => setTimeout(res, 3000)); // spinner delay
-
       apiLogger({
         event: 'LOGIN',
         endpoint: '/auth/login',
@@ -87,6 +86,7 @@ const LoginPage = () => {
         loading: '🌀 Signing you in...',
         success: () => {
           navigate('/dashboard'); // ✅ only on success
+          console.log('login', data);
           return '🎉 Signed in successfully!';
         },
         error: (err: unknown) => {
