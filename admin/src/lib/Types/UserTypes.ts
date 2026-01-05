@@ -23,8 +23,22 @@ const CreateUserSchema = z.object({
   avatar: z.string().optional(),
 });
 
-// Form data type from Zod schema
-export type FormData = z.infer<typeof CreateUserSchema>;
+const UpdateUserSchema = z.object({
+  name: z.string().min(2, 'Name is required'),
+  email: z.string().email('Invalid email'),
 
-export { CreateUserSchema };
-export type { User };
+  // 🔥 password OPTIONAL
+  password: z.string().min(6, 'Min 6 chars').optional().or(z.literal('')),
+
+  role: z.enum(['user', 'admin', 'manager']),
+  avatar: z.string().optional(),
+});
+
+// Form data type from Zod schema
+type FormData = z.infer<typeof CreateUserSchema>;
+
+// Form data type from Zod schema
+type UpdateFormData = z.infer<typeof UpdateUserSchema>;
+
+export { CreateUserSchema, UpdateUserSchema };
+export type { User, FormData, UpdateFormData };

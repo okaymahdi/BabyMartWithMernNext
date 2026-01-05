@@ -5,8 +5,15 @@ import UserFilters from '@/Components/Users/UserFilters';
 import UsersTable from '@/Components/Users/UsersTable';
 import useAxiosPrivate from '@/Hooks/useAxiosPrivate';
 import { useUsers } from '@/Hooks/useUsers';
-import { CreateUserSchema } from '@/lib/Types/UserTypes';
+import {
+  CreateUserSchema,
+  UpdateUserSchema,
+  type User,
+} from '@/lib/Types/UserTypes';
 import AddUserModal from '@/Modals/AddUserModal';
+import DeleteUserModal from '@/Modals/DeleteUserModal';
+import EditUserModal from '@/Modals/EditUserModal';
+import ViewUserModal from '@/Modals/ViewUserModal';
 import useAuthStore from '@/Store/UseAuthStore';
 import { apiLogger } from '@/utils/apiLogger';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +24,8 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import type z from 'zod';
 
-type FormData = z.infer<typeof CreateUserSchema>;
+type CreateUserForm = z.infer<typeof CreateUserSchema>;
+type UpdateUserForm = z.infer<typeof UpdateUserSchema>;
 
 const UsersPage = () => {
   const { users, total, loading, fetchUsers } = useUsers();
@@ -35,9 +43,27 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewUser, setViewUser] = useState<User | null>(null);
+
   // RHF Form
-  const addForm = useForm<FormData>({
+  const addForm = useForm<CreateUserForm>({
     resolver: zodResolver(CreateUserSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      role: 'user',
+      avatar: '',
+    },
+  });
+
+  const editForm = useForm<UpdateUserForm>({
+    resolver: zodResolver(UpdateUserSchema),
     defaultValues: {
       name: '',
       email: '',
@@ -66,8 +92,19 @@ const UsersPage = () => {
     }
   };
 
+  // 🔹 Filtered Users based on search & role
+  const filteredUsers = localUsers.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  if (loading) return <UserSkeleton isAdmin={isAdmin} />;
+
   // 🔹 Add User handler
-  const handleAddUser = async (data: FormData) => {
+  const handleAddUser = async (data: CreateUserForm) => {
     if (formLoading) return;
     setFormLoading(true);
 
@@ -112,20 +149,93 @@ const UsersPage = () => {
     }
   };
 
-  // 🔹 Filtered Users based on search & role
-  const filteredUsers = localUsers.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  // 🔹 View User Details handler (Modal open + form prefill)
+  const handleViewUser = (user: User) => {
+    setViewUser(user); // কোন user view করতে চাও
+    setIsViewModalOpen(true); // modal open
+  };
 
-  if (loading) return <UserSkeleton isAdmin={isAdmin} />;
+  // 🔹 Edit User handler (Modal open + form prefill)
+  const handleEditUser = (user: User) => {
+    // কোন user edit হচ্ছে সেটা store করা
+    setSelectedUser(user);
+
+    // 🔹 Form এ আগের data বসানো
+    editForm.reset({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+    });
+
+    // 🔹 Modal open
+    setIsEditModalOpen(true);
+  };
+
+  // 🔹 Update User handler (API call)
+  const handleUpdateUser = async (data: UpdateUserForm) => {
+    if (!selectedUser || formLoading) return;
+
+    setFormLoading(true);
+
+    try {
+      const res = await axiosPrivate.put(`/users/${selectedUser._id}`, data);
+
+      toast.success('✅ User updated successfully!');
+
+      apiLogger({
+        event: 'UPDATE_USER',
+        endpoint: `/users/${selectedUser._id}`,
+        payload: data,
+        response: res.data,
+        success: true,
+      });
+
+      // 🔹 Modal close + reset
+      setIsEditModalOpen(false);
+      setSelectedUser(null);
+      editForm.reset();
+
+      // 🔹 Refresh table
+      await fetchUsers();
+    } catch (err) {
+      console.error('Update User Error:', err);
+
+      apiLogger({
+        event: 'UPDATE_USER',
+        endpoint: `/users/${selectedUser?._id}`,
+        payload: data,
+        error: err,
+        success: false,
+      });
+
+      toast.error('⚠️ Failed to update user!');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // 🔹 Delete User handler
+  // Delete User handler
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    setFormLoading(true);
+    try {
+      await axiosPrivate.delete(`/users/${selectedUser._id}`);
+      toast.success('✅ User deleted successfully!');
+      await fetchUsers();
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      toast.error('⚠️ Failed to delete user!');
+      console.log('Delete User Error:', err);
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   return (
     <div className='p-5 space-y-5'>
-      {/* Header + Buttons */}
+      {/* ===== 🔹 Header + Buttons ===== */}
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight text-gray-900'>
@@ -165,8 +275,7 @@ const UsersPage = () => {
           )}
         </div>
       </div>
-
-      {/* Filters */}
+      {/* ===== 🔹 Filters ===== */}
       <UserFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -174,22 +283,50 @@ const UsersPage = () => {
         setRoleFilter={setRoleFilter}
       />
 
-      {/* Users Table */}
+      {/* ===== 🔹 Users Table ===== */}
       <UsersTable
         users={filteredUsers}
         isAdmin={isAdmin}
-        onView={(user) => console.log('view', user)}
-        onEdit={(user) => console.log('edit', user)}
-        onDelete={(user) => console.log('delete', user)}
+        onView={handleViewUser} // 👈 view handler pass
+        onEdit={handleEditUser} // ✅ এখানে
+        onDelete={(user) => {
+          setSelectedUser(user); // 👈 selectedUser set
+          setIsDeleteModalOpen(true); // 👈 modal open
+        }}
       />
 
-      {/* Add User Modal */}
+      {/* ===== 🔹 Add User Modal ===== */}
       <AddUserModal
         open={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         form={addForm}
         onSubmit={handleAddUser}
         loading={formLoading}
+      />
+
+      {/* ===== 🔹 Edit User Modal ===== */}
+      <ViewUserModal
+        open={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        user={viewUser}
+      />
+
+      {/* ===== 🔹 Edit User Modal ===== */}
+      <EditUserModal
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        form={editForm} // ✅ UpdateUserForm type
+        onSubmit={handleUpdateUser} // ✅ data: UpdateUserForm
+        loading={formLoading}
+      />
+
+      {/* ===== 🔹 Delete User Modal ===== */}
+      <DeleteUserModal
+        open={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteUser}
+        loading={formLoading}
+        user={selectedUser}
       />
     </div>
   );

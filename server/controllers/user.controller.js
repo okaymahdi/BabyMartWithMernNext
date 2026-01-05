@@ -102,27 +102,58 @@ const createUserController = asyncHandler(async (req, res) => {
 // Update User
 const updateUserController = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
+
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
 
-  // Update fields
+  // 🔹 Basic fields
   user.name = req.body.name || user.name;
   user.email = req.body.email || user.email;
+
   if (req.user.role === 'admin' && req.body.role) {
     user.role = req.body.role;
   }
+
   if (req.body.password) {
     user.password = req.body.password;
   }
+
   if (req.body.addresses) {
     user.addresses = req.body.addresses;
   }
 
+  // 🔹 ✅ AVATAR UPDATE LOGIC
+  if (req.body.avatar) {
+    // base64 image
+    const matches = req.body.avatar.match(
+      /^data:image\/([a-zA-Z]+);base64,(.+)$/,
+    );
+
+    if (matches) {
+      const ext = matches[1];
+      const data = Buffer.from(matches[2], 'base64');
+      const filename = `${Date.now()}.${ext}`;
+
+      // 🔹 old avatar delete (optional but recommended)
+      if (user.avatar?.startsWith('/uploads/')) {
+        const oldPath = path.join(__dirname, '..', user.avatar);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+
+      fs.writeFileSync(path.join(__dirname, '../uploads', filename), data);
+
+      user.avatar = `/uploads/${filename}`;
+    } else {
+      // already URL (cloudinary / external)
+      user.avatar = req.body.avatar;
+    }
+  }
+
   const updatedUser = await user.save();
 
-  // 🔹 Logger BEFORE sending response
+  // 🔹 Logger
   userLogger({
     user: updatedUser,
     event: 'User Updated Successfully',
